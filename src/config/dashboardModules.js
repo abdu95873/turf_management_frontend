@@ -1,5 +1,6 @@
 import {
   FiCalendar,
+  FiClock,
   FiDollarSign,
   FiGrid,
   FiMapPin,
@@ -14,6 +15,7 @@ export const DASHBOARD_MODULES = [
   { key: "venues", label: "Venue Management", path: "venues", icon: FiMapPin, roles: ["owner", "staff", "admin"] },
   { key: "events", label: "Event Management", path: "events", icon: FiCalendar, roles: ["owner", "admin"] },
   { key: "bookings", label: "Booking Management", path: "bookings", icon: FiShoppingCart, roles: ["owner", "staff", "admin"] },
+  { key: "slot-checking", label: "Slot Checking", path: "slot-checking", icon: FiClock, roles: ["owner", "staff", "admin"] },
 ];
 
 export function getDashboardNav(role) {

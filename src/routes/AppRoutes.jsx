@@ -20,6 +20,7 @@ import AdminOverviewPage from "../pages/dashboard/admin/AdminOverviewPage";
 import OwnerOverviewPage from "../pages/dashboard/owner/OwnerOverviewPage";
 import StaffOverviewPage from "../pages/dashboard/staff/StaffOverviewPage";
 import BookingManagementModulePage from "../pages/dashboard/modules/BookingManagementModulePage";
+import SlotCheckingModulePage from "../pages/dashboard/modules/SlotCheckingModulePage";
 import EventManagementModulePage from "../pages/dashboard/modules/EventManagementModulePage";
 import FinanceModulePage from "../pages/dashboard/modules/FinanceModulePage";
 import UserControlModulePage from "../pages/dashboard/modules/UserControlModulePage";
@@ -165,6 +166,14 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/owner/slot-checking"
+            element={
+              <ProtectedRoute allowedRoles={["owner"]}>
+                <SlotCheckingModulePage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/owner/resources" element={<Navigate to="/owner/venues" replace />} />
           <Route path="/owner/staff" element={<Navigate to="/owner/users" replace />} />
           <Route path="/owner" element={<Navigate to="/owner/overview" replace />} />
@@ -190,6 +199,14 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={["staff"]}>
                 <VenueManagementModulePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/staff/slot-checking"
+            element={
+              <ProtectedRoute allowedRoles={["staff"]}>
+                <SlotCheckingModulePage />
               </ProtectedRoute>
             }
           />
@@ -240,6 +257,14 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <BookingManagementModulePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/slot-checking"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <SlotCheckingModulePage />
               </ProtectedRoute>
             }
           />

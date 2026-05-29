@@ -1,0 +1,434 @@
+/* Slot Checking — mobile-first (reference UI), scales up on tablet/desktop */
+
+.slot-checking {
+  max-width: 100%;
+}
+
+.slot-checking-card.dashboard-card {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.slot-checking-card .dashboard-card-body {
+  padding: 16px;
+}
+
+@media (min-width: 768px) {
+  .slot-checking {
+    max-width: 920px;
+    margin: 0 auto;
+  }
+
+  .slot-checking-card .dashboard-card-body {
+    padding: 24px 28px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .slot-checking {
+    max-width: 1080px;
+  }
+}
+
+/* Venue filter */
+.slot-checking-venue {
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.slot-checking-venue .dashboard-select {
+  width: 100%;
+}
+
+.slot-checking-venue-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* Section titles */
+.slot-checking-section-title {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--ds-secondary, #1e293b);
+  letter-spacing: -0.02em;
+}
+
+.slot-checking-times-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+@media (min-width: 768px) {
+  .slot-checking-times-head {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+}
+
+.slot-checking-summary {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.slot-checking-loading {
+  margin: 0;
+  padding: 24px 0;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+/* Date strip */
+.slot-checking-dates {
+  margin-bottom: 24px;
+}
+
+.slot-checking-date-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin: 0 -4px;
+  padding-left: 4px;
+  padding-right: 4px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.slot-checking-date-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.slot-checking-date-card {
+  flex: 0 0 auto;
+  min-width: 72px;
+  width: 72px;
+  padding: 12px 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  text-align: center;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+@media (min-width: 768px) {
+  .slot-checking-date-scroll {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .slot-checking-date-card {
+    min-width: 84px;
+    width: 84px;
+    padding: 14px 10px 12px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .slot-checking-date-scroll {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .slot-checking-date-card {
+    width: auto;
+    min-width: 0;
+  }
+}
+
+.slot-checking-date-card.is-active {
+  border-color: #f97316;
+  box-shadow: 0 0 0 1px #f97316;
+}
+
+.slot-checking-date-day {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.slot-checking-date-num {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.slot-checking-date-card.is-active .slot-checking-date-num {
+  color: #f97316;
+}
+
+.slot-checking-date-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #fff;
+  background: #16a34a;
+}
+
+.slot-checking-date-spacer {
+  display: block;
+  height: 18px;
+}
+
+/* Time periods */
+.slot-checking-periods {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (min-width: 1024px) {
+  .slot-checking-periods {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    align-items: start;
+  }
+}
+
+.slot-checking-period {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.slot-checking-period-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  background: #fafafa;
+  text-align: left;
+  cursor: pointer;
+}
+
+.slot-checking-period-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.slot-checking-period-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.slot-checking-period-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.slot-checking-period-text strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.slot-checking-period-text span {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+  overflow-wrap: anywhere;
+}
+
+.slot-checking-period-toggle {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.slot-checking-period-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Slot grid */
+.slot-checking-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px 14px 16px;
+}
+
+@media (min-width: 480px) {
+  .slot-checking-slot-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+@media (min-width: 768px) {
+  .slot-checking-slot-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 14px 18px 18px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .slot-checking-slot-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.slot-checking-slot-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  padding: 8px 4px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s, color 0.15s;
+  min-width: 0;
+}
+
+.slot-checking-slot-btn:disabled {
+  cursor: not-allowed;
+}
+
+.slot-checking-slot-time {
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (min-width: 768px) {
+  .slot-checking-slot-time {
+    font-size: 0.8rem;
+  }
+}
+
+.slot-checking-slot-sub {
+  margin-top: 4px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Available — green */
+.slot-checking-slot-btn.is-available {
+  background: #ecfdf5;
+  border-color: #6ee7b7;
+}
+
+.slot-checking-slot-btn.is-available .slot-checking-slot-time {
+  color: #065f46;
+}
+
+.slot-checking-slot-btn.is-available .slot-checking-slot-sub {
+  color: #047857;
+}
+
+.slot-checking-slot-btn.is-available:hover:not(:disabled) {
+  background: #d1fae5;
+  border-color: #34d399;
+}
+
+.slot-checking-slot-btn.is-available.is-selected {
+  background: #a7f3d0;
+  border-color: #f97316;
+  box-shadow: 0 0 0 2px #f97316;
+}
+
+.slot-checking-slot-btn.is-available.is-selected .slot-checking-slot-time {
+  color: #064e3b;
+}
+
+.slot-checking-slot-btn.is-available.is-selected .slot-checking-slot-sub {
+  color: #047857;
+}
+
+/* Booked — red */
+.slot-checking-slot-btn.is-booked {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.slot-checking-slot-btn.is-booked .slot-checking-slot-time,
+.slot-checking-slot-btn.is-booked .slot-checking-slot-sub {
+  color: #b91c1c;
+}
+
+/* Blocked — amber (distinct from booked) */
+.slot-checking-slot-btn.is-blocked {
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+
+.slot-checking-slot-btn.is-blocked .slot-checking-slot-time,
+.slot-checking-slot-btn.is-blocked .slot-checking-slot-sub {
+  color: #b45309;
+}
+
+/* Selection summary */
+.slot-checking-selection {
+  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+}
+
+.slot-checking-selection-label {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #c2410c;
+}
+
+.slot-checking-selection-value {
+  margin: 6px 0 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #9a3412;
+}
+
+.slot-checking-selection-meta {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: #7c2d12;
+  overflow-wrap: anywhere;
+}
