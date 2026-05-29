@@ -8,14 +8,13 @@ import {
   paymentStatusLabel,
   submitManualPayment,
 } from "../../lib/payments";
+import ManualPaymentForm from "./ManualPaymentForm";
 
 export default function BookingPaymentPanel({ slotId, amount, onComplete, className = "" }) {
   const navigate = useNavigate();
   const { token, user } = useAuth();
   const [paymentMethod, setPaymentMethod] = useState("online");
-  const [transactionId, setTransactionId] = useState("");
-  const [paymentNote, setPaymentNote] = useState("");
-  const [pendingBookingId, setPendingBookingId] = useState("");
+  const [pendingBooking, setPendingBooking] = useState(null);
   const [feedback, setFeedback] = useState("");
 
   const ensureCanBook = () => {
@@ -34,7 +33,6 @@ export default function BookingPaymentPanel({ slotId, amount, onComplete, classN
     mutationFn: async () => {
       const booking = await createBooking(token, slotId);
       if (paymentMethod === "manual") {
-        setPendingBookingId(booking._id);
         return { booking, mode: "manual" };
       }
       return { booking, mode: "online" };
@@ -44,7 +42,12 @@ export default function BookingPaymentPanel({ slotId, amount, onComplete, classN
         navigate(`/payment?bookingId=${result.booking._id}`, { replace: true });
         onComplete?.(result.booking);
       } else {
-        setFeedback("Booking created. Submit your transaction ID below.");
+        setPendingBooking({
+          ...result.booking,
+          amount: result.booking.amount ?? amount,
+          amountPaid: result.booking.amountPaid ?? 0,
+        });
+        setFeedback("Booking created. Record your payment below.");
       }
     },
     onError: (error) => {
@@ -57,16 +60,14 @@ export default function BookingPaymentPanel({ slotId, amount, onComplete, classN
   });
 
   const manualMutation = useMutation({
-    mutationFn: () => submitManualPayment(token, pendingBookingId, transactionId.trim(), paymentNote.trim()),
+    mutationFn: (payload) => submitManualPayment(token, pendingBooking._id, payload),
     onSuccess: (result) => {
       setFeedback(result.message || "Payment submitted for review.");
-      setPendingBookingId("");
-      setTransactionId("");
-      setPaymentNote("");
+      setPendingBooking(null);
       onComplete?.(result.booking);
     },
     onError: (error) => {
-      setFeedback(getBookingAuthMessage(error) || "Failed to submit transaction ID.");
+      setFeedback(getBookingAuthMessage(error) || "Failed to submit payment.");
     },
   });
 
@@ -78,16 +79,6 @@ export default function BookingPaymentPanel({ slotId, amount, onComplete, classN
     }
     setFeedback("");
     bookMutation.mutate();
-  };
-
-  const handleManualSubmit = (event) => {
-    event.preventDefault();
-    if (!transactionId.trim()) {
-      setFeedback("Transaction ID is required.");
-      return;
-    }
-    setFeedback("");
-    manualMutation.mutate();
   };
 
   return (
@@ -105,7 +96,7 @@ export default function BookingPaymentPanel({ slotId, amount, onComplete, classN
             }`}
           >
             Manual payment
-            <span className="mt-0.5 block text-xs font-normal text-slate-500">Trx ID for owner approval</span>
+            <span className="mt-0.5 block text-xs font-normal text-slate-500">bKash, Nagad, Rocket, or cash</span>
           </button>
           <button
             type="button"
@@ -128,7 +119,7 @@ export default function BookingPaymentPanel({ slotId, amount, onComplete, classN
         </p>
       ) : null}
 
-      {!pendingBookingId ? (
+      {!pendingBooking ? (
         <button
           type="button"
           className="w-full rounded-xl bg-ds-secondary px-4 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-ds-primary disabled:opacity-60"
@@ -142,48 +133,23 @@ export default function BookingPaymentPanel({ slotId, amount, onComplete, classN
               : "Book & Pay with SSLCommerz"}
         </button>
       ) : (
-        <form className="space-y-3 rounded-xl border border-ds-accent/40 bg-ds-accent/10 p-4" onSubmit={handleManualSubmit}>
+        <div className="space-y-3 rounded-xl border border-ds-accent/40 bg-ds-accent/10 p-4">
           <p className="text-sm font-semibold text-ds-secondary">
-            {paymentStatusLabel("awaiting_approval")} — enter your payment transaction ID.
+            {paymentStatusLabel("awaiting_approval")} — submit payment for owner verification.
           </p>
-          <div>
-            <label htmlFor="manual-trx-id" className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
-              Transaction ID
-            </label>
-            <input
-              id="manual-trx-id"
-              type="text"
-              value={transactionId}
-              onChange={(event) => setTransactionId(event.target.value)}
-              placeholder="e.g. 8N90ABCD12"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-ds-accent focus:ring-2 focus:ring-ds-accent/20"
-            />
-          </div>
-          <div>
-            <label htmlFor="manual-note" className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
-              Note (optional)
-            </label>
-            <input
-              id="manual-note"
-              type="text"
-              value={paymentNote}
-              onChange={(event) => setPaymentNote(event.target.value)}
-              placeholder="Sender number or reference"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-ds-accent focus:ring-2 focus:ring-ds-accent/20"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full rounded-xl bg-ds-primary px-4 py-3 text-sm font-bold text-white transition hover:bg-ds-secondary disabled:opacity-60"
-            disabled={manualMutation.isPending}
-          >
-            {manualMutation.isPending ? "Submitting..." : "Submit for Approval"}
-          </button>
-        </form>
+          <ManualPaymentForm
+            booking={pendingBooking}
+            isSubmitting={manualMutation.isPending}
+            submitLabel="Submit for approval"
+            onSubmit={(payload) => manualMutation.mutate(payload)}
+          />
+        </div>
       )}
 
       {feedback ? (
-        <p className={`text-sm font-medium ${bookMutation.isError || manualMutation.isError ? "text-red-600" : "text-ds-primary"}`}>
+        <p
+          className={`text-sm font-medium ${bookMutation.isError || manualMutation.isError ? "text-red-600" : "text-ds-primary"}`}
+        >
           {feedback}
         </p>
       ) : null}

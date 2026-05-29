@@ -249,7 +249,7 @@ export function BookingHistory() {
     },
   });
   const manualMutation = useMutation({
-    mutationFn: ({ bookingId, transactionId, note }) => submitManualPayment(token, bookingId, transactionId, note),
+    mutationFn: ({ bookingId, ...payload }) => submitManualPayment(token, bookingId, payload),
     onSuccess: () => historyQuery.refetch(),
   });
   const verifyMutation = useMutation({
@@ -286,7 +286,7 @@ export function BookingHistory() {
                 {booking.paymentStatus === "paid" ? (
                   <LinkButton label="Invoice" onClick={() => downloadInvoice(booking._id)} />
                 ) : null}
-                {["manual_pending", "failed"].includes(booking.paymentStatus) ? (
+                {["manual_pending", "failed", "partial_paid"].includes(booking.paymentStatus) ? (
                   <>
                     <button type="button" onClick={() => payMutation.mutate(booking._id)}>
                       Pay Online (SSLCommerz)
@@ -314,7 +314,7 @@ export function BookingHistory() {
                 ) : null}
               </div>
 
-              {["manual_pending", "failed"].includes(booking.paymentStatus) ? (
+              {["manual_pending", "failed", "partial_paid"].includes(booking.paymentStatus) ? (
                 <form
                   className="mt-3 space-y-2 rounded-lg border border-dashed border-slate-200 p-3"
                   onSubmit={(event) => {

@@ -28,7 +28,8 @@ export function AnalyticsTrendChart({ title, data, emptyMessage = "No booking da
 
 function breakdownTone(status) {
   if (status === "confirmed" || status === "paid") return "success";
-  if (status === "pending" || status === "awaiting_approval" || status === "manual_pending") return "warning";
+  if (status === "pending" || status === "awaiting_approval" || status === "manual_pending" || status === "partial_paid")
+    return "warning";
   if (status === "cancelled" || status === "refunded" || status === "failed" || status === "no_show") return "danger";
   return "neutral";
 }

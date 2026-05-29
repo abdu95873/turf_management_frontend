@@ -62,8 +62,8 @@ export function StatCard({ label, value, hint, tone = "default", icon: Icon }) {
   );
 }
 
-export function StatGrid({ children }) {
-  return <div className="dashboard-stat-grid">{children}</div>;
+export function StatGrid({ children, className = "" }) {
+  return <div className={`dashboard-stat-grid ${className}`.trim()}>{children}</div>;
 }
 
 export function Badge({ children, tone = "neutral", size = "md", className = "" }) {

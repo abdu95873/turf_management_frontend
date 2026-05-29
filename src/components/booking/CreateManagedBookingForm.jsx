@@ -4,6 +4,7 @@ import { FiPlus, FiSearch, FiUser } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 import { api, authHeaders } from "../../lib/api";
 import { formatTimeRange } from "../../lib/slotTime";
+import ManualPaymentForm from "./ManualPaymentForm";
 import {
   Alert,
   Button,
@@ -12,7 +13,6 @@ import {
   FormGrid,
   Input,
   Select,
-  Textarea,
 } from "../../pages/dashboard/shared/PageChrome";
 
 const BOOKING_ROLES = new Set(["owner", "staff", "admin"]);
@@ -26,10 +26,12 @@ export default function CreateManagedBookingForm({ onCreated }) {
   const [resourceId, setResourceId] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [slotId, setSlotId] = useState("");
+  const [customerMode, setCustomerMode] = useState("registered");
   const [customerQuery, setCustomerQuery] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [transactionId, setTransactionId] = useState("");
-  const [note, setNote] = useState("");
+  const [guestName, setGuestName] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+  const [paymentValues, setPaymentValues] = useState({ isValid: false });
 
   const resourcesQuery = useQuery({
     queryKey: ["managed-booking-resources"],
@@ -49,7 +51,7 @@ export default function CreateManagedBookingForm({ onCreated }) {
       api(`/api/bookings/manage/customers?q=${encodeURIComponent(customerQuery.trim())}`, {
         headers: authHeaders(token),
       }),
-    enabled: canCreate && open && customerQuery.trim().length >= 2 && !selectedCustomer,
+    enabled: canCreate && open && customerMode === "registered" && customerQuery.trim().length >= 2 && !selectedCustomer,
   });
 
   const availableSlots = useMemo(
@@ -59,17 +61,26 @@ export default function CreateManagedBookingForm({ onCreated }) {
 
   const selectedSlot = availableSlots.find((slot) => slot._id === slotId) ?? null;
   const selectedResource = (resourcesQuery.data ?? []).find((resource) => resource._id === resourceId) ?? null;
+  const slotAmount = selectedSlot?.pricePerHour ?? selectedResource?.pricePerHour ?? 0;
+  const paymentBooking = selectedSlot
+    ? { _id: "new", amount: slotAmount, amountPaid: 0, amountDue: slotAmount }
+    : null;
+
+  const hasCustomer =
+    customerMode === "registered"
+      ? Boolean(selectedCustomer)
+      : guestName.trim().length >= 2 && guestPhone.trim().length >= 6;
 
   useEffect(() => {
     setSlotId("");
   }, [resourceId, date]);
 
   useEffect(() => {
-    if (!selectedCustomer) return;
+    if (customerMode !== "registered" || !selectedCustomer) return;
     if (customerQuery !== selectedCustomer.email) {
       setSelectedCustomer(null);
     }
-  }, [customerQuery, selectedCustomer]);
+  }, [customerQuery, selectedCustomer, customerMode]);
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -77,23 +88,30 @@ export default function CreateManagedBookingForm({ onCreated }) {
         method: "POST",
         headers: authHeaders(token),
         body: JSON.stringify({
-          userId: selectedCustomer.id,
+          ...(customerMode === "registered" && selectedCustomer ? { userId: selectedCustomer.id } : {}),
+          ...(customerMode === "walkin"
+            ? { guestName: guestName.trim(), guestPhone: guestPhone.trim() }
+            : {}),
           slotId,
           idempotencyKey: `managed-${slotId}-${Date.now()}`,
-          transactionId: transactionId.trim(),
-          note: note.trim(),
+          amount: paymentValues.amount,
+          paymentMethodCode: paymentValues.paymentMethodCode,
+          transactionId: paymentValues.transactionId,
+          note: paymentValues.note ?? "",
         }),
       }),
     onSuccess: (result) => {
-      setMessage(
-        `Booking confirmed for ${result.customer?.name ?? "customer"} — ${result.booking?.amount ?? ""} BDT`
-      );
+      const who = result.customer?.walkIn
+        ? result.customer.name
+        : (result.customer?.name ?? "customer");
+      setMessage(`Booking confirmed for ${who} — ${result.booking?.amount ?? ""} BDT`);
       setError("");
       setSlotId("");
-      setTransactionId("");
-      setNote("");
+      setPaymentValues({ isValid: false });
       setCustomerQuery("");
       setSelectedCustomer(null);
+      setGuestName("");
+      setGuestPhone("");
       onCreated?.();
     },
     onError: (err) => {
@@ -104,13 +122,12 @@ export default function CreateManagedBookingForm({ onCreated }) {
 
   if (!canCreate) return null;
 
-  const canSubmit =
-    Boolean(selectedCustomer && slotId && transactionId.trim().length >= 4) && !createMutation.isPending;
+  const canSubmit = Boolean(hasCustomer && slotId && paymentValues.isValid) && !createMutation.isPending;
 
   return (
     <DashboardCard
       title="Book for customer"
-      description="Manual payment booking for a registered user."
+      description="Search a registered customer or add walk-in name and phone."
       actions={
         <Button type="button" variant="ghost" className="dashboard-btn-sm" onClick={() => setOpen((current) => !current)}>
           <FiPlus aria-hidden="true" />
@@ -178,87 +195,113 @@ export default function CreateManagedBookingForm({ onCreated }) {
           {selectedSlot && selectedResource ? (
             <p className="dashboard-form-summary">
               {selectedResource.name} · {formatTimeRange(selectedSlot.startTime, selectedSlot.endTime)} ·{" "}
-              <strong>{selectedResource.pricePerHour} BDT</strong>
+              <strong>{slotAmount} BDT</strong>
             </p>
           ) : null}
 
-          <Field label="Customer" htmlFor="managed-booking-customer">
-            <div className="dashboard-search-field">
-              <FiSearch className="dashboard-search-field-icon" aria-hidden="true" />
-              <Input
-                id="managed-booking-customer"
-                type="search"
-                placeholder="Search by customer email or name…"
-                value={customerQuery}
-                onChange={(event) => setCustomerQuery(event.target.value)}
-              />
-            </div>
+          <Field label="Customer type" htmlFor="managed-booking-customer-mode">
+            <Select
+              id="managed-booking-customer-mode"
+              value={customerMode}
+              onChange={(event) => {
+                setCustomerMode(event.target.value);
+                setSelectedCustomer(null);
+                setCustomerQuery("");
+              }}
+            >
+              <option value="registered">Registered customer (search)</option>
+              <option value="walkin">Walk-in (name & phone)</option>
+            </Select>
           </Field>
 
-          {selectedCustomer ? (
-            <div className="dashboard-pick-selected">
-              <FiUser aria-hidden="true" />
-              <span>
-                {selectedCustomer.name} · {selectedCustomer.email}
-              </span>
-              <button type="button" onClick={() => setSelectedCustomer(null)}>
-                Change
-              </button>
-            </div>
-          ) : null}
+          {customerMode === "registered" ? (
+            <>
+              <Field label="Search customer" htmlFor="managed-booking-customer">
+                <div className="dashboard-search-field">
+                  <FiSearch className="dashboard-search-field-icon" aria-hidden="true" />
+                  <Input
+                    id="managed-booking-customer"
+                    type="search"
+                    placeholder="Search by email or name…"
+                    value={customerQuery}
+                    onChange={(event) => setCustomerQuery(event.target.value)}
+                  />
+                </div>
+              </Field>
 
-          {!selectedCustomer && customerQuery.trim().length >= 2 ? (
-            <div className="dashboard-pick-list">
-              {customersQuery.isLoading ? <p className="dashboard-field-hint">Searching…</p> : null}
-              {!customersQuery.isLoading && !(customersQuery.data ?? []).length ? (
-                <p className="dashboard-field-hint">No customer found. User must have a registered account.</p>
+              {selectedCustomer ? (
+                <div className="dashboard-pick-selected">
+                  <FiUser aria-hidden="true" />
+                  <span>
+                    {selectedCustomer.name} · {selectedCustomer.email}
+                  </span>
+                  <button type="button" onClick={() => setSelectedCustomer(null)}>
+                    Change
+                  </button>
+                </div>
               ) : null}
-              {(customersQuery.data ?? []).map((customer) => (
-                <button
-                  key={customer.id}
-                  type="button"
-                  className="dashboard-pick-option"
-                  onClick={() => {
-                    setSelectedCustomer(customer);
-                    setCustomerQuery(customer.email);
-                  }}
-                >
-                  <strong>{customer.name}</strong>
-                  <span>{customer.email}</span>
-                </button>
-              ))}
-            </div>
+
+              {!selectedCustomer && customerQuery.trim().length >= 2 ? (
+                <div className="dashboard-pick-list">
+                  {customersQuery.isLoading ? <p className="dashboard-field-hint">Searching…</p> : null}
+                  {!customersQuery.isLoading && !(customersQuery.data ?? []).length ? (
+                    <p className="dashboard-field-hint">
+                      No registered customer found. Switch to walk-in to book without an account.
+                    </p>
+                  ) : null}
+                  {(customersQuery.data ?? []).map((customer) => (
+                    <button
+                      key={customer.id}
+                      type="button"
+                      className="dashboard-pick-option"
+                      onClick={() => {
+                        setSelectedCustomer(customer);
+                        setCustomerQuery(customer.email);
+                      }}
+                    >
+                      <strong>{customer.name}</strong>
+                      <span>{customer.email}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <FormGrid columns={2}>
+              <Field label="Customer name" htmlFor="managed-booking-guest-name">
+                <Input
+                  id="managed-booking-guest-name"
+                  value={guestName}
+                  onChange={(event) => setGuestName(event.target.value)}
+                  placeholder="Full name"
+                />
+              </Field>
+              <Field label="Phone number" htmlFor="managed-booking-guest-phone">
+                <Input
+                  id="managed-booking-guest-phone"
+                  type="tel"
+                  value={guestPhone}
+                  onChange={(event) => setGuestPhone(event.target.value)}
+                  placeholder="01XXXXXXXXX"
+                />
+              </Field>
+            </FormGrid>
+          )}
+
+          {paymentBooking && hasCustomer ? (
+            <ManualPaymentForm booking={paymentBooking} hideSubmit onValuesChange={setPaymentValues} />
           ) : null}
-
-          <FormGrid columns={2}>
-            <Field label="Transaction ID" htmlFor="managed-booking-trx">
-              <Input
-                id="managed-booking-trx"
-                value={transactionId}
-                onChange={(event) => setTransactionId(event.target.value)}
-                placeholder="bKash / Nagad / cash reference"
-              />
-            </Field>
-
-            <Field label="Payment note (optional)" htmlFor="managed-booking-note">
-              <Textarea
-                id="managed-booking-note"
-                rows={2}
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                placeholder="Sender number or internal note"
-              />
-            </Field>
-          </FormGrid>
 
           <div className="dashboard-form-actions">
             <Button type="button" disabled={!canSubmit} onClick={() => createMutation.mutate()}>
-              {createMutation.isPending ? "Booking…" : "Confirm manual booking"}
+              {createMutation.isPending ? "Booking…" : "Confirm booking"}
             </Button>
           </div>
         </div>
       ) : (
-        <p className="dashboard-field-hint">Use this to book a slot for walk-in or phone customers with manual payment.</p>
+        <p className="dashboard-field-hint">
+          Book for a registered user or walk-in guest with manual payment (full or partial).
+        </p>
       )}
     </DashboardCard>
   );

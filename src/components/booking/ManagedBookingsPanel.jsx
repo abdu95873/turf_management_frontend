@@ -10,10 +10,19 @@ import {
   FiSearch,
   FiX,
 } from "react-icons/fi";
+import DashboardFiltersBar from "../dashboard/DashboardFiltersBar";
 import CreateManagedBookingForm from "./CreateManagedBookingForm";
+import ManualPaymentForm from "./ManualPaymentForm";
 import { useAuth } from "../../context/AuthContext";
 import { api, authHeaders } from "../../lib/api";
-import { paymentStatusLabel } from "../../lib/payments";
+import {
+  canReconfirmCancelled,
+  canRecordManualPayment,
+  getBookingAmountDue,
+  getEffectiveAmountPaid,
+  isBookingFullyPaid,
+} from "../../lib/bookingPayment";
+import { paymentStatusLabel, recordBookingPayment } from "../../lib/payments";
 import { formatBookingStatusLabel } from "../../lib/bookingStatus";
 import { formatTimeRange } from "../../lib/slotTime";
 import {
@@ -33,11 +42,14 @@ const FILTERS = [
   { key: "approval", label: "Payment review" },
   { key: "pending", label: "Pending" },
   { key: "confirmed", label: "Confirmed" },
+  { key: "cancelled", label: "Cancelled" },
+  { key: "refunded", label: "Refunded" },
 ];
 
 function bookingBadgeTone(status) {
   if (status === "paid" || status === "confirmed") return "success";
-  if (status === "awaiting_approval" || status === "pending" || status === "manual_pending") return "warning";
+  if (status === "awaiting_approval" || status === "pending" || status === "manual_pending" || status === "partial_paid")
+    return "warning";
   if (status === "failed" || status === "cancelled" || status === "refunded" || status === "no_show") return "danger";
   return "neutral";
 }
@@ -59,23 +71,59 @@ function formatBookingDate(date) {
 
 function canRefundPayment(booking) {
   return (
-    booking.bookingStatus === "cancelled" &&
-    ["paid", "awaiting_approval"].includes(booking.paymentStatus)
+    ["paid", "partial_paid", "awaiting_approval", "pending"].includes(booking.paymentStatus) ||
+    (booking.amountPaid ?? 0) > 0
   );
 }
 
-function isPaymentPaid(booking) {
-  return booking.paymentStatus === "paid";
+function cannotConfirmUntilPaymentSettled(booking) {
+  return ["awaiting_approval", "pending"].includes(booking.paymentStatus);
+}
+
+function canCancelWithRefund(booking) {
+  return canRefundPayment(booking);
+}
+
+function getPendingPayment(booking) {
+  return (booking.manualPayments ?? []).find((payment) => payment.status === "pending");
+}
+
+function getPaymentActionLabel(booking, amountDue, isOpen) {
+  if (isOpen) return "Close";
+  if (booking.bookingStatus === "cancelled") {
+    if (canReconfirmCancelled(booking)) {
+      return amountDue > 0 ? "Re-confirm" : "Re-confirm";
+    }
+    return amountDue > 0 ? `Pay due (${amountDue} BDT)` : "Re-confirm";
+  }
+  if (amountDue > 0) return `Pay due (${amountDue} BDT)`;
+  if (booking.bookingStatus === "pending") return "Confirm";
+  return "Manage";
+}
+
+function getPaymentActionBtnClass(booking, amountDue, isOpen) {
+  if (isOpen) return "booking-mgmt-btn-neutral";
+  if (booking.bookingStatus === "cancelled") return "booking-mgmt-btn-confirm";
+  if (amountDue > 0) return "booking-mgmt-btn-due";
+  return "booking-mgmt-btn-confirm";
+}
+
+function getCustomerLabel(booking) {
+  if (booking.isWalkIn && booking.guestName) {
+    return `${booking.guestName}${booking.guestPhone ? ` · ${booking.guestPhone}` : ""}`;
+  }
+  return null;
 }
 
 export default function ManagedBookingsPanel({ title = "Bookings", description }) {
   const { token } = useAuth();
   const [reviewNote, setReviewNote] = useState({});
-  const [manualConfirmForm, setManualConfirmForm] = useState({});
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [reviewExpandedId, setReviewExpandedId] = useState("");
   const [confirmExpandedId, setConfirmExpandedId] = useState("");
+  const [cancelExpandedId, setCancelExpandedId] = useState("");
+  const [filterDate, setFilterDate] = useState("");
 
   const managedBookingsQuery = useQuery({
     queryKey: ["managed-bookings"],
@@ -95,54 +143,64 @@ export default function ManagedBookingsPanel({ title = "Bookings", description }
     return map;
   }, [resourcesQuery.data]);
 
+  const recordPaymentMutation = useMutation({
+    mutationFn: ({ bookingId, payload }) => recordBookingPayment(token, bookingId, payload),
+    onSuccess: () => {
+      managedBookingsQuery.refetch();
+    },
+  });
+
   const statusMutation = useMutation({
-    mutationFn: ({ bookingId, bookingStatus, paymentStatus, transactionId, note }) =>
+    mutationFn: ({ bookingId, bookingStatus, paymentStatus }) =>
       api(`/api/bookings/${bookingId}/status`, {
         method: "PATCH",
         headers: authHeaders(token),
         body: JSON.stringify({
           bookingStatus,
           ...(paymentStatus ? { paymentStatus } : {}),
-          ...(transactionId ? { transactionId } : {}),
-          ...(note ? { note } : {}),
         }),
       }),
     onSuccess: () => {
       setReviewExpandedId("");
       setConfirmExpandedId("");
+      setCancelExpandedId("");
       managedBookingsQuery.refetch();
     },
   });
 
   function handleConfirmClick(booking) {
-    if (isPaymentPaid(booking)) {
-      statusMutation.mutate({ bookingId: booking._id, bookingStatus: "confirmed" });
-      return;
-    }
     setReviewExpandedId("");
+    setCancelExpandedId("");
     setConfirmExpandedId((current) => (current === booking._id ? "" : booking._id));
   }
 
-  function submitManualConfirm(booking) {
-    const form = manualConfirmForm[booking._id] ?? { transactionId: "", note: "" };
+  function handleCancelClick(booking) {
+    setReviewExpandedId("");
+    setConfirmExpandedId("");
+    setCancelExpandedId((current) => (current === booking._id ? "" : booking._id));
+  }
+
+  function cancelWithRefund(booking) {
     statusMutation.mutate({
       bookingId: booking._id,
-      bookingStatus: "confirmed",
-      transactionId: form.transactionId.trim(),
-      note: form.note.trim(),
+      bookingStatus: "refunded",
+      paymentStatus: "refunded",
     });
-    setManualConfirmForm((current) => ({
-      ...current,
-      [booking._id]: { transactionId: "", note: "" },
-    }));
+  }
+
+  function cancelWithoutRefund(booking) {
+    statusMutation.mutate({
+      bookingId: booking._id,
+      bookingStatus: "cancelled",
+    });
   }
 
   const reviewMutation = useMutation({
-    mutationFn: ({ bookingId, action, note }) =>
+    mutationFn: ({ bookingId, action, note, manualPaymentId }) =>
       api(`/api/bookings/${bookingId}/manual-review`, {
         method: "PATCH",
         headers: authHeaders(token),
-        body: JSON.stringify({ action, note }),
+        body: JSON.stringify({ action, note, ...(manualPaymentId ? { manualPaymentId } : {}) }),
       }),
     onSuccess: () => {
       setReviewExpandedId("");
@@ -154,12 +212,22 @@ export default function ManagedBookingsPanel({ title = "Bookings", description }
   const pendingManual = bookings.filter((booking) => booking.paymentStatus === "awaiting_approval");
   const confirmed = bookings.filter((booking) => booking.bookingStatus === "confirmed");
   const pending = bookings.filter((booking) => booking.bookingStatus === "pending");
+  const cancelled = bookings.filter((booking) => booking.bookingStatus === "cancelled");
+  const refunded = bookings.filter(
+    (booking) => booking.bookingStatus === "refunded" || booking.paymentStatus === "refunded"
+  );
 
   const filteredBookings = useMemo(() => {
     let list = bookings;
     if (filter === "approval") list = pendingManual;
     else if (filter === "confirmed") list = bookings.filter((b) => b.bookingStatus === "confirmed");
     else if (filter === "pending") list = bookings.filter((b) => b.bookingStatus === "pending");
+    else if (filter === "cancelled") list = cancelled;
+    else if (filter === "refunded") list = refunded;
+
+    if (filterDate) {
+      list = list.filter((booking) => booking.bookingDate === filterDate);
+    }
 
     const query = search.trim().toLowerCase();
     if (!query) return list;
@@ -177,24 +245,28 @@ export default function ManagedBookingsPanel({ title = "Bookings", description }
         .toLowerCase();
       return haystack.includes(query);
     });
-  }, [bookings, filter, pendingManual, search, resourceMap]);
+  }, [bookings, filter, filterDate, pendingManual, cancelled, refunded, search, resourceMap]);
 
   const filterCounts = useMemo(
     () => ({
-      all: bookings.length,
+      all: filterDate ? bookings.filter((b) => b.bookingDate === filterDate).length : bookings.length,
       approval: pendingManual.length,
       pending: pending.length,
       confirmed: confirmed.length,
+      cancelled: cancelled.length,
+      refunded: refunded.length,
     }),
-    [bookings.length, pendingManual.length, pending.length, confirmed.length]
+    [bookings, filterDate, pendingManual.length, pending.length, confirmed.length, cancelled.length, refunded.length]
   );
 
   return (
     <>
       <CreateManagedBookingForm onCreated={() => managedBookingsQuery.refetch()} />
 
-      <StatGrid>
+      <StatGrid className="booking-mgmt-overview">
         <StatCard label="Total bookings" value={bookings.length} icon={FiCalendar} />
+        <StatCard label="Cancelled" value={cancelled.length} tone="danger" icon={FiX} />
+        <StatCard label="Refunded" value={refunded.length} tone="warning" icon={FiRefreshCw} />
         <StatCard
           label="Awaiting payment review"
           value={pendingManual.length}
@@ -203,7 +275,6 @@ export default function ManagedBookingsPanel({ title = "Bookings", description }
           hint={pendingManual.length ? "Action required" : "All clear"}
         />
         <StatCard label="Confirmed" value={confirmed.length} tone="success" icon={FiCheckCircle} />
-        <StatCard label="Pending" value={pending.length} tone="accent" icon={FiClock} />
       </StatGrid>
 
       {pendingManual.length ? (
@@ -216,27 +287,42 @@ export default function ManagedBookingsPanel({ title = "Bookings", description }
       <DashboardCard
         title={title}
         description={description ?? "Track reservations, verify payments, and update booking status."}
-        className="booking-mgmt-card"
+        className="booking-mgmt-panel"
       >
-        <div className="booking-mgmt-toolbar">
-          <div className="booking-mgmt-search">
-            <FiSearch className="booking-mgmt-search-icon" aria-hidden="true" />
+        <DashboardFiltersBar
+          hint={
+            filter !== "all" || filterDate || search.trim()
+              ? [
+                  filter !== "all" ? FILTERS.find((f) => f.key === filter)?.label : null,
+                  filterDate ? `Date ${filterDate}` : null,
+                  search.trim() ? `“${search.trim()}”` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+              : "All bookings"
+          }
+        >
+          <div className="dashboard-filters-search-wrap">
+            <FiSearch className="dashboard-filters-search-icon" aria-hidden="true" />
             <input
               type="search"
-              className="dashboard-input booking-mgmt-search-input"
-              placeholder="Search by date, venue, amount, or transaction ID…"
+              className="dashboard-filters-search-input"
+              placeholder="Search venue, date, amount, transaction ID…"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
-          <div className="booking-mgmt-toolbar-actions">
-            <Field label="Filter" htmlFor="booking-filter" className="booking-mgmt-filter-field">
-              <Select
-                id="booking-filter"
-                className="booking-mgmt-filter-select"
-                value={filter}
-                onChange={(event) => setFilter(event.target.value)}
-              >
+          <div className="dashboard-filters-grid">
+            <Field label="Booking date" htmlFor="booking-date-filter" className="dashboard-filters-field">
+              <Input
+                id="booking-date-filter"
+                type="date"
+                value={filterDate}
+                onChange={(event) => setFilterDate(event.target.value)}
+              />
+            </Field>
+            <Field label="Status" htmlFor="booking-filter" className="dashboard-filters-field">
+              <Select id="booking-filter" value={filter} onChange={(event) => setFilter(event.target.value)}>
                 {FILTERS.map((item) => (
                   <option key={item.key} value={item.key}>
                     {item.label} ({filterCounts[item.key] ?? 0})
@@ -244,17 +330,23 @@ export default function ManagedBookingsPanel({ title = "Bookings", description }
                 ))}
               </Select>
             </Field>
-            <button
-              type="button"
-              className="booking-mgmt-btn booking-mgmt-btn-neutral"
-              disabled={managedBookingsQuery.isFetching}
-              onClick={() => managedBookingsQuery.refetch()}
-            >
-              <FiRefreshCw className={managedBookingsQuery.isFetching ? "booking-mgmt-spin" : ""} />
-              Refresh
-            </button>
+            <div className="dashboard-filters-actions">
+              <button
+                type="button"
+                className="dashboard-filters-action-btn dashboard-filters-action-btn-clear"
+                disabled={filter === "all" && !filterDate && !search.trim()}
+                onClick={() => {
+                  setFilter("all");
+                  setFilterDate("");
+                  setSearch("");
+                }}
+              >
+                <FiX aria-hidden="true" />
+                Clear all
+              </button>
+            </div>
           </div>
-        </div>
+        </DashboardFiltersBar>
 
         {managedBookingsQuery.isLoading ? (
           <p className="booking-mgmt-loading">Loading bookings…</p>
@@ -293,42 +385,64 @@ export default function ManagedBookingsPanel({ title = "Bookings", description }
                   const needsReview = booking.paymentStatus === "awaiting_approval";
                   const isReviewOpen = reviewExpandedId === booking._id;
                   const isConfirmOpen = confirmExpandedId === booking._id;
+                  const isCancelOpen = cancelExpandedId === booking._id;
                   const isCancelled = booking.bookingStatus === "cancelled";
-                  const isFinal = ["refunded", "no_show"].includes(booking.bookingStatus);
-                  const showRefund = canRefundPayment(booking);
-                  const showManageActions = !needsReview && !isCancelled && !isFinal;
+                  const isRefunded = booking.bookingStatus === "refunded" || booking.paymentStatus === "refunded";
+                  const isFinal = ["no_show"].includes(booking.bookingStatus) || isRefunded;
+                  const showRefund = canRefundPayment(booking) && isCancelled;
+                  const showManageActions =
+                    !needsReview && !isCancelled && !isFinal && !cannotConfirmUntilPaymentSettled(booking);
+                  const amountPaid = getEffectiveAmountPaid(booking);
+                  const amountDue = getBookingAmountDue(booking);
+                  const fullyPaid = isBookingFullyPaid(booking);
+                  const canRecordPayment = canRecordManualPayment(booking);
+                  const allowReconfirmCancelled = canReconfirmCancelled(booking);
+                  const pendingPayment = getPendingPayment(booking);
+                  const showPayDueButton = amountDue > 0;
+                  const customerLabel = getCustomerLabel(booking);
+                  const paymentActionLabel = getPaymentActionLabel(booking, amountDue, isConfirmOpen);
+
+                  const cardToneClass = needsReview
+                    ? "booking-mgmt-row-card--review"
+                    : `booking-mgmt-row-card--${booking.bookingStatus}`;
 
                   return (
                     <Fragment key={booking._id}>
-                      <tr className={needsReview ? "booking-mgmt-row-review" : isConfirmOpen ? "booking-mgmt-row-cancel" : ""}>
-                        <td>
+                      <tr
+                        className={[
+                          "booking-mgmt-row-card",
+                          cardToneClass,
+                          needsReview ? "booking-mgmt-row-review" : "",
+                          isConfirmOpen || isCancelOpen ? "booking-mgmt-row-card--expanded" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        <td data-label="Schedule" className="booking-mgmt-cell-head booking-mgmt-cell-schedule">
                           <p className="booking-mgmt-primary">{formatBookingDate(booking.bookingDate)}</p>
                           <p className="booking-mgmt-muted">
                             {formatTimeRange(booking.startTime, booking.endTime)}
                           </p>
                         </td>
-                        <td>
+                        <td data-label="Venue" className="booking-mgmt-cell-head booking-mgmt-cell-venue">
                           <p className="booking-mgmt-primary">
                             {resourceMap[booking.resourceId] ?? "Venue"}
                           </p>
                           <p className="booking-mgmt-muted booking-mgmt-id">#{String(booking._id).slice(-8)}</p>
+                          {customerLabel ? <p className="booking-mgmt-muted">{customerLabel}</p> : null}
                         </td>
-                        <td>
+                        <td data-label="Amount" className="booking-mgmt-cell-amount">
                           <p className="booking-mgmt-amount">{booking.amount} BDT</p>
-                          {booking.paymentMethod ? (
-                            <p className="booking-mgmt-muted">
-                              {String(booking.paymentMethod ?? "")
-                                .replace(/_/g, " ")
-                                .replace(/\b\w/g, (char) => char.toUpperCase())}
-                            </p>
-                          ) : null}
+                          <p className="booking-mgmt-muted">
+                            Paid {amountPaid} · Due {amountDue}
+                          </p>
                         </td>
-                        <td>
+                        <td data-label="Booking" className="booking-mgmt-cell-badge">
                           <Badge tone={bookingBadgeTone(booking.bookingStatus)}>
                             {formatBookingStatusLabel(booking.bookingStatus)}
                           </Badge>
                         </td>
-                        <td>
+                        <td data-label="Payment" className="booking-mgmt-cell-badge">
                           <Badge tone={bookingBadgeTone(booking.paymentStatus)}>
                             {paymentStatusLabel(booking.paymentStatus)}
                           </Badge>
@@ -336,7 +450,7 @@ export default function ManagedBookingsPanel({ title = "Bookings", description }
                             <p className="booking-mgmt-trx">Trx: {booking.manualTransactionId}</p>
                           ) : null}
                         </td>
-                        <td>
+                        <td data-label="Actions" className="booking-mgmt-cell-actions">
                           {needsReview ? (
                             <button
                               type="button"
@@ -349,48 +463,44 @@ export default function ManagedBookingsPanel({ title = "Bookings", description }
                             <div className="booking-mgmt-actions">
                               <button
                                 type="button"
-                                className={`booking-mgmt-btn ${isConfirmOpen ? "booking-mgmt-btn-neutral" : "booking-mgmt-btn-confirm"}`}
+                                className={`booking-mgmt-btn ${getPaymentActionBtnClass(booking, amountDue, isConfirmOpen)}`}
                                 disabled={statusMutation.isPending}
                                 onClick={() => handleConfirmClick(booking)}
                               >
-                                {isConfirmOpen ? "Close" : "Confirm"}
+                                {paymentActionLabel}
                               </button>
                               {showRefund ? (
                                 <button
                                   type="button"
                                   className="booking-mgmt-btn booking-mgmt-btn-danger"
                                   disabled={statusMutation.isPending}
-                                  onClick={() =>
-                                    statusMutation.mutate({
-                                      bookingId: booking._id,
-                                      bookingStatus: "refunded",
-                                      paymentStatus: "refunded",
-                                    })
-                                  }
+                                  onClick={() => cancelWithRefund(booking)}
                                 >
                                   Refund
                                 </button>
-                              ) : null}
+                              ) : (
+                                <span className="booking-mgmt-muted">No refund</span>
+                              )}
                             </div>
                           ) : showManageActions ? (
                             <div className="booking-mgmt-actions">
+                              {showPayDueButton || booking.bookingStatus === "pending" ? (
+                                <button
+                                  type="button"
+                                  className={`booking-mgmt-btn ${getPaymentActionBtnClass(booking, amountDue, isConfirmOpen)}`}
+                                  disabled={statusMutation.isPending || cannotConfirmUntilPaymentSettled(booking)}
+                                  onClick={() => handleConfirmClick(booking)}
+                                >
+                                  {paymentActionLabel}
+                                </button>
+                              ) : null}
                               <button
                                 type="button"
-                                className={`booking-mgmt-btn ${isConfirmOpen ? "booking-mgmt-btn-neutral" : "booking-mgmt-btn-confirm"}`}
-                                disabled={statusMutation.isPending || booking.bookingStatus === "confirmed"}
-                                onClick={() => handleConfirmClick(booking)}
-                              >
-                                {isConfirmOpen ? "Close" : "Confirm"}
-                              </button>
-                              <button
-                                type="button"
-                                className="booking-mgmt-btn booking-mgmt-btn-cancel"
+                                className={`booking-mgmt-btn ${isCancelOpen ? "booking-mgmt-btn-neutral" : "booking-mgmt-btn-cancel"}`}
                                 disabled={statusMutation.isPending}
-                                onClick={() =>
-                                  statusMutation.mutate({ bookingId: booking._id, bookingStatus: "cancelled" })
-                                }
+                                onClick={() => handleCancelClick(booking)}
                               >
-                                Cancel
+                                {isCancelOpen ? "Close" : "Cancel"}
                               </button>
                               <button
                                 type="button"
@@ -414,13 +524,23 @@ export default function ManagedBookingsPanel({ title = "Bookings", description }
                             <div className="booking-mgmt-review-panel">
                               <div className="booking-mgmt-review-meta">
                                 <div>
-                                  <p className="booking-mgmt-review-label">Transaction ID</p>
-                                  <p className="booking-mgmt-review-value">{booking.manualTransactionId || "—"}</p>
+                                  <p className="booking-mgmt-review-label">Submitted payment</p>
+                                  <p className="booking-mgmt-review-value">
+                                    {pendingPayment
+                                      ? `${pendingPayment.amount} BDT via ${pendingPayment.paymentMethodLabel}`
+                                      : "—"}
+                                  </p>
                                 </div>
-                                {booking.manualPaymentNote ? (
+                                <div>
+                                  <p className="booking-mgmt-review-label">Transaction ID</p>
+                                  <p className="booking-mgmt-review-value">
+                                    {pendingPayment?.transactionId || booking.manualTransactionId || "—"}
+                                  </p>
+                                </div>
+                                {pendingPayment?.note ? (
                                   <div>
                                     <p className="booking-mgmt-review-label">Customer note</p>
-                                    <p className="booking-mgmt-review-value">{booking.manualPaymentNote}</p>
+                                    <p className="booking-mgmt-review-value">{pendingPayment.note}</p>
                                   </div>
                                 ) : null}
                               </div>
@@ -447,6 +567,7 @@ export default function ManagedBookingsPanel({ title = "Bookings", description }
                                       bookingId: booking._id,
                                       action: "approve",
                                       note: reviewNote[booking._id] ?? "",
+                                      manualPaymentId: pendingPayment?._id,
                                     })
                                   }
                                 >
@@ -462,6 +583,7 @@ export default function ManagedBookingsPanel({ title = "Bookings", description }
                                       bookingId: booking._id,
                                       action: "reject",
                                       note: reviewNote[booking._id] ?? "",
+                                      manualPaymentId: pendingPayment?._id,
                                     })
                                   }
                                 >
@@ -477,68 +599,147 @@ export default function ManagedBookingsPanel({ title = "Bookings", description }
                         <tr className="booking-mgmt-cancel-row">
                           <td colSpan={6}>
                             <div className="booking-mgmt-review-panel booking-mgmt-cancel-panel">
-                              <p className="booking-mgmt-cancel-lead">
-                                {isPaymentPaid(booking)
-                                  ? "Confirm this booking."
-                                  : "Record manual payment to confirm this booking."}
-                              </p>
-                              {!isPaymentPaid(booking) ? (
+                              {cannotConfirmUntilPaymentSettled(booking) ? (
+                                <p className="booking-mgmt-cancel-lead">
+                                  Complete or verify online payment before confirming.
+                                </p>
+                              ) : (
                                 <>
-                                  <Field label="Transaction ID" htmlFor={`confirm-trx-${booking._id}`}>
-                                    <Input
-                                      id={`confirm-trx-${booking._id}`}
-                                      value={manualConfirmForm[booking._id]?.transactionId ?? ""}
-                                      onChange={(event) =>
-                                        setManualConfirmForm((current) => ({
-                                          ...current,
-                                          [booking._id]: {
-                                            transactionId: event.target.value,
-                                            note: current[booking._id]?.note ?? "",
-                                          },
-                                        }))
+                                  {(booking.manualPayments ?? []).length ? (
+                                    <div className="booking-mgmt-payment-history">
+                                      <p className="booking-mgmt-review-label">Payment history</p>
+                                      <ul className="dashboard-detail-list">
+                                        {(booking.manualPayments ?? []).map((payment) => (
+                                          <li key={payment._id}>
+                                            <span>
+                                              {payment.amount} BDT · {payment.paymentMethodLabel} · {payment.status}
+                                            </span>
+                                            <strong>{payment.transactionId || "—"}</strong>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  ) : null}
+                                  {canRecordPayment && !(isCancelled && allowReconfirmCancelled) ? (
+                                    <ManualPaymentForm
+                                      booking={{ ...booking, amountPaid, amountDue }}
+                                      isSubmitting={recordPaymentMutation.isPending}
+                                      submitLabel="Record payment"
+                                      onSubmit={(payload) =>
+                                        recordPaymentMutation.mutate(
+                                          { bookingId: booking._id, payload },
+                                          { onSuccess: () => setConfirmExpandedId("") }
+                                        )
                                       }
-                                      placeholder="bKash / Nagad / cash reference"
                                     />
-                                  </Field>
-                                  <Field label="Payment note (optional)" htmlFor={`confirm-note-${booking._id}`}>
-                                    <Input
-                                      id={`confirm-note-${booking._id}`}
-                                      value={manualConfirmForm[booking._id]?.note ?? ""}
-                                      onChange={(event) =>
-                                        setManualConfirmForm((current) => ({
-                                          ...current,
-                                          [booking._id]: {
-                                            transactionId: current[booking._id]?.transactionId ?? "",
-                                            note: event.target.value,
-                                          },
-                                        }))
-                                      }
-                                      placeholder="Sender number or internal note"
-                                    />
-                                  </Field>
+                                  ) : null}
+                                  {isCancelled && allowReconfirmCancelled && showPayDueButton ? (
+                                    <>
+                                      <p className="booking-mgmt-muted booking-mgmt-panel-hint">
+                                        Past payments: {amountPaid} BDT recorded. You can re-confirm now or
+                                        collect the remaining {amountDue} BDT below.
+                                      </p>
+                                      <ManualPaymentForm
+                                        booking={{ ...booking, amountPaid, amountDue }}
+                                        isSubmitting={recordPaymentMutation.isPending}
+                                        submitLabel="Record additional payment"
+                                        onSubmit={(payload) =>
+                                          recordPaymentMutation.mutate(
+                                            { bookingId: booking._id, payload },
+                                            { onSuccess: () => managedBookingsQuery.refetch() }
+                                          )
+                                        }
+                                      />
+                                    </>
+                                  ) : null}
+                                  <div className="booking-mgmt-review-actions">
+                                    {isCancelled && allowReconfirmCancelled ? (
+                                      <button
+                                        type="button"
+                                        className="booking-mgmt-btn booking-mgmt-btn-confirm"
+                                        disabled={statusMutation.isPending}
+                                        onClick={() =>
+                                          statusMutation.mutate({
+                                            bookingId: booking._id,
+                                            bookingStatus: "confirmed",
+                                          })
+                                        }
+                                      >
+                                        Re-confirm booking
+                                      </button>
+                                    ) : null}
+                                    {!isCancelled &&
+                                    booking.bookingStatus === "pending" &&
+                                    !showPayDueButton &&
+                                    (booking.amountPaid ?? 0) <= 0 ? (
+                                      <button
+                                        type="button"
+                                        className="booking-mgmt-btn booking-mgmt-btn-confirm"
+                                        disabled={statusMutation.isPending}
+                                        onClick={() =>
+                                          statusMutation.mutate({
+                                            bookingId: booking._id,
+                                            bookingStatus: "confirmed",
+                                          })
+                                        }
+                                      >
+                                        Confirm without payment
+                                      </button>
+                                    ) : null}
+                                    {!isCancelled && showPayDueButton && booking.bookingStatus === "confirmed" ? (
+                                      <p className="booking-mgmt-muted booking-mgmt-panel-hint">
+                                        Record payment to clear the remaining {amountDue} BDT due.
+                                      </p>
+                                    ) : null}
+                                    {isCancelled && !allowReconfirmCancelled && showPayDueButton ? (
+                                      <p className="booking-mgmt-muted booking-mgmt-panel-hint">
+                                        Record payment before re-confirming this booking.
+                                      </p>
+                                    ) : null}
+                                    <button
+                                      type="button"
+                                      className="booking-mgmt-btn booking-mgmt-btn-neutral"
+                                      onClick={() => setConfirmExpandedId("")}
+                                    >
+                                      Back
+                                    </button>
+                                  </div>
                                 </>
-                              ) : null}
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ) : null}
+                      {isCancelOpen ? (
+                        <tr className="booking-mgmt-cancel-row">
+                          <td colSpan={6}>
+                            <div className="booking-mgmt-review-panel booking-mgmt-cancel-panel">
+                              <p className="booking-mgmt-cancel-lead">
+                                Cancel this booking. Choose whether to refund the customer.
+                              </p>
                               <div className="booking-mgmt-review-actions">
+                                {canCancelWithRefund(booking) ? (
+                                  <button
+                                    type="button"
+                                    className="booking-mgmt-btn booking-mgmt-btn-danger"
+                                    disabled={statusMutation.isPending}
+                                    onClick={() => cancelWithRefund(booking)}
+                                  >
+                                    Cancel with refund
+                                  </button>
+                                ) : null}
                                 <button
                                   type="button"
-                                  className="booking-mgmt-btn booking-mgmt-btn-confirm"
-                                  disabled={
-                                    statusMutation.isPending ||
-                                    (!isPaymentPaid(booking) &&
-                                      (manualConfirmForm[booking._id]?.transactionId?.trim().length ?? 0) < 4)
-                                  }
-                                  onClick={() =>
-                                    isPaymentPaid(booking)
-                                      ? statusMutation.mutate({ bookingId: booking._id, bookingStatus: "confirmed" })
-                                      : submitManualConfirm(booking)
-                                  }
+                                  className="booking-mgmt-btn booking-mgmt-btn-cancel"
+                                  disabled={statusMutation.isPending}
+                                  onClick={() => cancelWithoutRefund(booking)}
                                 >
-                                  {isPaymentPaid(booking) ? "Confirm booking" : "Confirm with manual payment"}
+                                  Cancel (no refund)
                                 </button>
                                 <button
                                   type="button"
                                   className="booking-mgmt-btn booking-mgmt-btn-neutral"
-                                  onClick={() => setConfirmExpandedId("")}
+                                  onClick={() => setCancelExpandedId("")}
                                 >
                                   Back
                                 </button>

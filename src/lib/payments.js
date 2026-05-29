@@ -14,11 +14,43 @@ export async function createBooking(token, slotId) {
   });
 }
 
-export async function submitManualPayment(token, bookingId, transactionId, note = "") {
+export async function fetchPaymentMethods() {
+  return api("/api/payment-methods");
+}
+
+export async function fetchAdminPaymentMethods(token) {
+  return api("/api/admin/payment-methods", { headers: authHeaders(token) });
+}
+
+export async function createAdminPaymentMethod(token, payload) {
+  return api("/api/admin/payment-methods", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateAdminPaymentMethod(token, methodId, payload) {
+  return api(`/api/admin/payment-methods/${methodId}`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function submitManualPayment(token, bookingId, payload) {
   return api(`/api/bookings/me/${bookingId}/manual-payment`, {
     method: "POST",
     headers: authHeaders(token),
-    body: JSON.stringify({ transactionId, note }),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function recordBookingPayment(token, bookingId, payload) {
+  return api(`/api/bookings/${bookingId}/record-payment`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -57,6 +89,7 @@ export async function fetchPaymentStatus({ tranId, bookingId }) {
 
 export function paymentStatusLabel(status) {
   if (status === "manual_pending") return "Payment required";
+  if (status === "partial_paid") return "Partially paid";
   if (status === "awaiting_approval") return "Awaiting verification";
   if (status === "pending") return "Online payment pending";
   if (status === "paid") return "Paid";
