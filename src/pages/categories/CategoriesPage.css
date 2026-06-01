@@ -90,7 +90,13 @@
 .categories-page-body {
   max-width: 80rem;
   margin: 0 auto;
-  padding: 40px 24px 80px;
+  padding: 32px 16px 64px;
+}
+
+@media (min-width: 640px) {
+  .categories-page-body {
+    padding: 40px 24px 80px;
+  }
 }
 
 .categories-page-section-title {

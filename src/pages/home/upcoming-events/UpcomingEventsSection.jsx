@@ -88,8 +88,19 @@ export default function UpcomingEventsSection() {
     const viewport = trackRef.current;
     if (!viewport) return;
 
-    const peekOffset = Math.max(0, (SLIDE_WIDTH + SLIDE_GAP) * 0.35);
-    viewport.scrollLeft = peekOffset;
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const applyScroll = () => {
+      if (mq.matches) {
+        const peekOffset = Math.max(0, (SLIDE_WIDTH + SLIDE_GAP) * 0.35);
+        viewport.scrollLeft = peekOffset;
+      } else {
+        viewport.scrollLeft = 0;
+      }
+    };
+
+    applyScroll();
+    mq.addEventListener("change", applyScroll);
+    return () => mq.removeEventListener("change", applyScroll);
   }, []);
 
   return (
@@ -106,13 +117,17 @@ export default function UpcomingEventsSection() {
             </h2>
           </div>
           <Link to="/events" className="view-all-btn">
-            View All Tournaments
+            <span className="view-all-btn-label">View All Tournaments</span>
             <span className="arrow" aria-hidden="true">
               →
             </span>
           </Link>
         </div>
       </div>
+
+      <p className="events-swipe-hint" aria-hidden="true">
+        Swipe for more tournaments <span className="events-swipe-hint-arrow">→</span>
+      </p>
 
       <div className="events-slide-two">
         <div

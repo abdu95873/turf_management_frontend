@@ -6,7 +6,7 @@ export default function SharedFooter() {
   return (
     <footer className="relative left-1/2 right-1/2 mt-0 w-screen ml-[-50vw] mr-[-50vw] bg-ds-secondary text-slate-300">
       <div className="mx-auto max-w-7xl px-4 py-14 md:px-6">
-        <div className="grid gap-10 border-b border-white/10 pb-10 md:grid-cols-4">
+        <div className="grid gap-10 border-b border-white/10 pb-10 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <Link to="/" className="mb-4 inline-flex items-center gap-2">
               <span className="grid h-9 w-9 place-items-center rounded-md bg-ds-accent text-xs font-extrabold text-ds-dark">

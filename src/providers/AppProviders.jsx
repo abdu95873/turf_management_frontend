@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
+import ScrollToTop from "../components/routing/ScrollToTop";
 import { AuthProvider } from "../context/AuthContext";
 
 const queryClient = new QueryClient({
@@ -11,6 +12,7 @@ const queryClient = new QueryClient({
 export default function AppProviders({ children }) {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <QueryClientProvider client={queryClient}>
         <AuthProvider>{children}</AuthProvider>
       </QueryClientProvider>

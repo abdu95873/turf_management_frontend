@@ -1,6 +1,6 @@
-import { useAuth } from "../../../context/AuthContext";
 import { HeroCtaButton } from "../../../components/shared/SharedNavbar";
 import bannerImage from "../../../assets/banner02.jpg";
+import "./BannerSection.css";
 
 const STAT_CARDS = [
   { valueKey: "courts", fallback: "48", label: "Premium Courts" },
@@ -9,13 +9,12 @@ const STAT_CARDS = [
 ];
 
 export default function BannerSection({ venueCount }) {
-  const { token } = useAuth();
   const courtCount = venueCount > 0 ? `${venueCount}` : STAT_CARDS[0].fallback;
 
   return (
     <section
       id="home"
-      className="relative left-1/2 right-1/2 h-screen min-h-[640px] w-screen ml-[-50vw] mr-[-50vw] overflow-hidden bg-[#0a0f14]"
+      className="relative left-1/2 right-1/2 min-h-[100svh] w-screen ml-[-50vw] mr-[-50vw] overflow-hidden bg-[#0a0f14] md:h-screen md:min-h-[640px]"
     >
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -24,32 +23,32 @@ export default function BannerSection({ venueCount }) {
       <div className="absolute inset-0 bg-gradient-to-r from-[#0a0f14]/95 via-[#0a0f14]/75 to-[#0a0f14]/35" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#0a0f14]/60 via-transparent to-[#0a0f14]/30" />
 
-      <div className="relative mx-auto flex h-full max-w-7xl flex-col justify-center px-4 pb-16 pt-28 md:px-6 md:pt-32">
-        <div className="grid items-center gap-12 lg:grid-cols-[1fr_auto] lg:gap-8">
+      <div className="relative mx-auto flex min-h-[100svh] max-w-7xl flex-col justify-center px-4 pb-12 pt-24 sm:pb-16 sm:pt-28 md:min-h-0 md:h-full md:px-6 md:pt-32">
+        <div className="grid items-center gap-8 sm:gap-10 lg:grid-cols-[1fr_auto] lg:gap-8">
           <div className="max-w-xl lg:max-w-2xl">
             <h1 className="select-none font-black uppercase leading-[0.92] tracking-tight">
-              <span className="block text-[clamp(3.5rem,12vw,7.5rem)] text-white">Own</span>
-              <span className="block text-[clamp(3.5rem,12vw,7.5rem)] text-[#A4DA01]">The</span>
+              <span className="block text-[clamp(2.5rem,11vw,7.5rem)] text-white md:text-[clamp(3.5rem,12vw,7.5rem)]">Own</span>
+              <span className="block text-[clamp(2.5rem,11vw,7.5rem)] text-[#A4DA01] md:text-[clamp(3.5rem,12vw,7.5rem)]">The</span>
               <span
-                className="block text-[clamp(3.5rem,12vw,7.5rem)] text-transparent"
+                className="block text-[clamp(2.5rem,11vw,7.5rem)] text-transparent md:text-[clamp(3.5rem,12vw,7.5rem)]"
                 style={{ WebkitTextStroke: "2px rgba(255,255,255,0.95)" }}
               >
                 Pitch
               </span>
             </h1>
 
-            <p className="mt-6 max-w-lg text-base leading-relaxed text-white/85 md:text-lg">
+            <p className="mt-4 max-w-lg text-sm leading-relaxed text-white/85 sm:mt-6 sm:text-base md:text-lg">
               Book premium football courts, connect with{" "}
               <strong className="font-semibold text-white">certified coaches</strong>, track every goal with{" "}
               <strong className="font-semibold text-white">live scorecards</strong>, and compete in city-wide
               tournaments.
             </p>
 
-            <div className="mt-8 flex flex-wrap items-center gap-4">
-              <HeroCtaButton to={token ? "/discover" : "/auth/register"} variant="lime">
+            <div className="banner-cta-group mt-6 sm:mt-8">
+              <HeroCtaButton to="/#venues" variant="lime">
                 Book a Court
               </HeroCtaButton>
-              <HeroCtaButton to="#upcoming-events" variant="white">
+              <HeroCtaButton to="#upcoming-events" variant="outline">
                 View Tournaments
               </HeroCtaButton>
             </div>

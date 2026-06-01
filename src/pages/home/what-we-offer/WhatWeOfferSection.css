@@ -10,7 +10,13 @@
     linear-gradient(30deg, rgba(164, 218, 1, 0.04) 12%, transparent 12.5%, transparent 87%, rgba(164, 218, 1, 0.04) 87.5%, rgba(164, 218, 1, 0.04)),
     linear-gradient(150deg, rgba(164, 218, 1, 0.04) 12%, transparent 12.5%, transparent 87%, rgba(164, 218, 1, 0.04) 87.5%, rgba(164, 218, 1, 0.04));
   background-size: 18px 32px;
-  padding: 72px 0 80px;
+  padding: 48px 0 56px;
+}
+
+@media (min-width: 768px) {
+  .offer-section-two {
+    padding: 72px 0 80px;
+  }
 }
 
 .offer-section-two .element-1 {
@@ -72,13 +78,13 @@
   gap: 24px;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 640px) {
   .offer-section-two .offer-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 1024px) {
   .offer-section-two .offer-row {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 28px;

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./styles/responsive.css";
 
 @theme {
   --color-ds-primary: #097e52;
@@ -147,7 +148,7 @@ button {
   cursor: not-allowed;
 }
 
-ul {
+.app:not(.app-dashboard) ul {
   list-style: none;
   margin: 10px 0 0;
   padding: 0;
@@ -155,7 +156,7 @@ ul {
   gap: 8px;
 }
 
-li {
+.app:not(.app-dashboard) li {
   display: flex;
   gap: 10px;
   align-items: center;
@@ -165,7 +166,7 @@ li {
   padding: 8px 10px;
 }
 
-li span {
+.app:not(.app-dashboard) li span {
   flex: 1;
   overflow-wrap: anywhere;
 }
@@ -927,13 +928,13 @@ li span {
     font-size: 18px;
   }
 
-  li {
+  .app:not(.app-dashboard) li {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
 
-  li span {
+  .app:not(.app-dashboard) li span {
     width: 100%;
   }
 

@@ -22,7 +22,7 @@ function getInitials(name) {
   );
 }
 
-export default function UserProfileMenu({ isHome = false }) {
+export default function UserProfileMenu() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -57,9 +57,8 @@ export default function UserProfileMenu({ isHome = false }) {
     navigate("/");
   };
 
-  const triggerClass = isHome
-    ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
-    : "border-slate-200 bg-white text-ds-secondary hover:border-ds-primary/30 hover:bg-slate-50";
+  const triggerClass =
+    "border-slate-200 bg-white text-ds-secondary hover:border-ds-primary/30 hover:bg-slate-50";
 
   return (
     <div ref={rootRef} className="relative">

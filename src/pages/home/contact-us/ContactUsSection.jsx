@@ -24,7 +24,7 @@ export default function ContactUsSection() {
               <span className="line-outline">With Team.</span>
             </h2>
 
-            <HeroCtaButton to="/contact" variant="white">
+            <HeroCtaButton to="/contact" variant="white" className="contact-cta-btn !w-auto">
               Contact Us
             </HeroCtaButton>
           </div>

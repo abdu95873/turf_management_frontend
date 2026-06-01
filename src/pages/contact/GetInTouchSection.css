@@ -1,14 +1,27 @@
 .get-in-touch-section {
   background: #f4f7f5;
-  padding: 48px 0 80px;
+  padding: 40px 0 56px;
+}
+
+@media (min-width: 768px) {
+  .get-in-touch-section {
+    padding: 48px 0 80px;
+  }
 }
 
 .get-in-touch-inner {
   display: grid;
-  gap: 48px;
+  gap: 32px;
   max-width: 80rem;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 16px;
+}
+
+@media (min-width: 640px) {
+  .get-in-touch-inner {
+    gap: 48px;
+    padding: 0 24px;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -79,12 +92,25 @@
 
 .get-in-touch-section .contact-form {
   display: grid;
-  gap: 20px;
-  padding: 32px;
+  gap: 16px;
+  padding: 20px;
   border-radius: 16px;
   background: #fff;
   border: 1px solid #e2e8f0;
   box-shadow: 0 8px 30px rgba(25, 35, 53, 0.06);
+}
+
+@media (min-width: 640px) {
+  .get-in-touch-section .contact-form {
+    gap: 20px;
+    padding: 28px;
+  }
+}
+
+@media (min-width: 768px) {
+  .get-in-touch-section .contact-form {
+    padding: 32px;
+  }
 }
 
 .get-in-touch-section .contact-form-row {

@@ -1,0 +1,35 @@
+/* Shared public-page responsive helpers (sm 640px, md 768px, lg 1024px) */
+
+@media (max-width: 639px) {
+  .events-page-hero-inner,
+  .events-page-body,
+  .categories-page-hero-inner,
+  .categories-page-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .events-page-body,
+  .categories-page-body {
+    padding-bottom: 56px;
+  }
+
+  .upcoming-events-section .events-carousel-viewport.slick-list {
+    padding: 0 16px;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .events-page-hero-inner,
+  .categories-page-hero-inner {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+/* Legacy platform pages inside .app */
+@media (max-width: 767px) {
+  .app:not(.app-dashboard) .grid.two {
+    grid-template-columns: 1fr;
+  }
+}

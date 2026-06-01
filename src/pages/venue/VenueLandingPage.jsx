@@ -81,7 +81,7 @@ export default function VenueLandingPage() {
   return (
     <main className="pb-10 font-sans text-ds-secondary">
       <section className="relative left-1/2 right-1/2 w-screen ml-[-50vw] mr-[-50vw]">
-        <div className="relative h-[280px] overflow-hidden md:h-[360px]">
+        <div className="relative h-[220px] overflow-hidden sm:h-[260px] md:h-[320px] lg:h-[360px]">
           <img src={coverImage} alt={resource.name} className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/30 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[1180px] px-4 pb-8 md:px-6">
@@ -100,8 +100,8 @@ export default function VenueLandingPage() {
         </div>
       </section>
 
-      <div className="mx-auto mt-8 max-w-[1180px] space-y-8 px-4 md:px-6">
-        <section className="grid gap-4 md:grid-cols-4">
+      <div className="mx-auto mt-8 max-w-[1180px] space-y-8 px-4 sm:px-5 md:px-6">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-semibold uppercase text-slate-500">Price</p>
             <p className="mt-1 text-2xl font-extrabold text-slate-900">{resource.pricePerHour} BDT/h</p>
@@ -114,9 +114,9 @@ export default function VenueLandingPage() {
             </p>
             <p className="text-xs text-slate-500">{detailsQuery.data?.rating?.total ?? 0} reviews</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:col-span-2">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:col-span-2 lg:col-span-2">
             <p className="text-xs font-semibold uppercase text-slate-500">Facilities</p>
-            <p className="mt-2 text-sm text-slate-700">
+            <p className="mt-2 break-words text-sm text-slate-700">
               {(resource.facilities ?? []).join(" · ") || "No facilities listed yet."}
             </p>
           </div>

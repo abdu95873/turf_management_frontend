@@ -7,12 +7,10 @@ export default function RootLayout() {
   const isDashboardPath = ["/owner", "/admin", "/staff"].some((prefix) =>
     location.pathname.startsWith(prefix)
   );
-  const isHome = location.pathname === "/" || location.pathname === "/home";
-
   return (
     <div className={isDashboardPath ? "app app-dashboard" : "w-full font-sans"}>
       {!isDashboardPath ? <SharedNavbar variant="hero" /> : null}
-      <div className={!isDashboardPath && !isHome ? "pt-[72px]" : ""}>
+      <div className={!isDashboardPath ? "pt-[72px]" : ""}>
         <Outlet />
       </div>
       {!isDashboardPath ? <SharedFooter /> : null}

@@ -3,7 +3,6 @@ import { api } from "../../../lib/api";
 import BannerSection from "../banner/BannerSection";
 import BookingSearchSection from "../booking-search/BookingSearchSection";
 import WhatWeOfferSection from "../what-we-offer/WhatWeOfferSection";
-import SportsCategorySection from "../sports-category/SportsCategorySection";
 import UpcomingEventsSection from "../upcoming-events/UpcomingEventsSection";
 import HowItWorksSection from "../how-it-works/HowItWorksSection";
 import ContactUsSection from "../contact-us/ContactUsSection";
@@ -22,10 +21,6 @@ export default function HomePage() {
       <BookingSearchSection resources={resources} />
 
       <WhatWeOfferSection />
-
-      <div className="mx-auto max-w-7xl px-4 py-16 md:px-6 md:py-20">
-        <SportsCategorySection resources={resources} />
-      </div>
 
       <UpcomingEventsSection />
 

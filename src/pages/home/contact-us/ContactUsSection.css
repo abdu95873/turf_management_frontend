@@ -69,6 +69,20 @@
   -webkit-text-stroke: 2px rgba(255, 255, 255, 0.95);
 }
 
+.contact-hero-copy .contact-cta-btn {
+  width: auto;
+  max-width: 100%;
+  padding: 10px 6px 10px 18px;
+  font-size: 0.8rem;
+}
+
+@media (min-width: 640px) {
+  .contact-hero-copy .contact-cta-btn {
+    padding: 10px 6px 10px 24px;
+    font-size: 0.875rem;
+  }
+}
+
 .contact-play-btn {
   flex-shrink: 0;
   display: grid;
@@ -102,17 +116,34 @@
 @media (max-width: 767px) {
   .contact-hero {
     border-radius: 24px 24px 0 0;
+    min-height: min(68vh, 480px);
   }
 
   .contact-hero-inner {
     flex-direction: column;
     align-items: flex-start;
-    padding-top: 100px;
-    padding-bottom: 36px;
+    min-height: min(68vh, 480px);
+    padding: 88px 16px 32px;
+  }
+
+  .contact-hero-title {
+    margin-bottom: 20px;
+  }
+
+  .contact-hero-title .line-white,
+  .contact-hero-title .line-accent,
+  .contact-hero-title .line-outline {
+    font-size: clamp(2.25rem, 10vw, 3.25rem);
   }
 
   .contact-play-btn {
     align-self: flex-end;
+    width: 72px;
+    height: 72px;
     margin-bottom: 0;
+  }
+
+  .contact-play-text {
+    font-size: 0.62rem;
   }
 }

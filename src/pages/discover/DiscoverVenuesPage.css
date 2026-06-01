@@ -26,7 +26,13 @@
   z-index: 1;
   max-width: 80rem;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 16px;
+}
+
+@media (min-width: 640px) {
+  .discover-hero-inner {
+    padding: 0 24px;
+  }
 }
 
 .discover-back-link {
@@ -90,7 +96,13 @@
 .discover-body {
   max-width: 80rem;
   margin: 0 auto;
-  padding: 40px 24px 80px;
+  padding: 32px 16px 64px;
+}
+
+@media (min-width: 640px) {
+  .discover-body {
+    padding: 40px 24px 80px;
+  }
 }
 
 .discover-section-title {
@@ -182,38 +194,26 @@
   display: grid;
   gap: 16px;
   margin-bottom: 28px;
-  padding: 20px;
+  padding: 16px;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   background: #fff;
+}
+
+@media (min-width: 640px) {
+  .discover-filters {
+    padding: 20px;
+  }
 }
 
 .discover-filters-single {
   grid-template-columns: 1fr;
-  max-width: 420px;
-  margin-bottom: 28px;
+  max-width: 100%;
 }
 
-@media (min-width: 768px) {
-  .discover-filters.discover-filters {
-  display: grid;
-  gap: 16px;
-  margin-bottom: 28px;
-  padding: 20px;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  background: #fff;
-}
-
-.discover-filters-single {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (min-width: 768px) {
-  .discover-filters {
-    grid-template-columns: 1fr 220px;
-    align-items: end;
+@media (min-width: 640px) {
+  .discover-filters-single {
+    max-width: 420px;
   }
 }
 
@@ -344,6 +344,7 @@
 
 .discover-venue-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
