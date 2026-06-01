@@ -17,16 +17,20 @@ function toTypeLabel(type) {
 }
 
 export default function VenueLandingPage() {
-  const { resourceId = "" } = useParams();
+  const { venueSlug: venueSlugParam = "", resourceId: legacyResourceId = "" } = useParams();
+  const venueKey = venueSlugParam || legacyResourceId;
   const nowTick = useNowTicker();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [selectedSlotId, setSelectedSlotId] = useState("");
 
   const detailsQuery = useQuery({
-    queryKey: ["venue-landing", resourceId],
-    enabled: Boolean(resourceId),
-    queryFn: () => api(`/api/resources/${resourceId}`),
+    queryKey: ["venue-landing", venueKey],
+    enabled: Boolean(venueKey),
+    queryFn: () => api(`/api/resources/${encodeURIComponent(venueKey)}`),
   });
+
+  const resource = detailsQuery.data?.resource;
+  const resourceId = resource?._id ?? "";
 
   const packagesQuery = useQuery({
     queryKey: ["venue-packages", resourceId],
@@ -39,8 +43,6 @@ export default function VenueLandingPage() {
     enabled: Boolean(resourceId && selectedDate),
     queryFn: () => api(`/api/slots?resourceId=${resourceId}&date=${selectedDate}`),
   });
-
-  const resource = detailsQuery.data?.resource;
   const packages = packagesQuery.data ?? [];
   const bookableSlots = useMemo(() => {
     const future = filterFutureSlots(slotsQuery.data ?? [], selectedDate);

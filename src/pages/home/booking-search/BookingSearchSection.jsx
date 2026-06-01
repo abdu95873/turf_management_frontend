@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
 import { FiChevronDown, FiLayers, FiMapPin, FiSearch, FiX } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
+import { getVenuePath } from "../../../lib/venueUrls";
 import { useAuth } from "../../../context/AuthContext";
 import useNowTicker from "../../../hooks/useNowTicker";
 import { api, authHeaders, getBookingAuthMessage } from "../../../lib/api";
@@ -641,7 +642,7 @@ export default function BookingSearchSection({ resources = [] }) {
     onConfirm: handleConfirmBooking,
     confirmDisabled: bookMutation.isPending || !selectedSlotId,
     confirmPending: bookMutation.isPending,
-    onViewVenue: () => selectedResource && navigate(`/venue/${selectedResource._id}`),
+    onViewVenue: () => selectedResource && navigate(getVenuePath(selectedResource)),
   };
 
   const renderVenueList = (mode) =>

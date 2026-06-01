@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import BookingPaymentPanel from "../../components/booking/BookingPaymentPanel";
 import { useAuth } from "../../context/AuthContext";
 import { api } from "../../lib/api";
+import { getVenuePath } from "../../lib/venueUrls";
 import { FALLBACK_VENUE_IMAGE, filterResourcesByCategory, getCategoryMeta, normalizeCategoryKey, toCategoryLabel } from "./categoryMeta";
 import "./CategoryVenuesPage.css";
 
@@ -431,7 +432,7 @@ export default function CategoryVenuesPage() {
                 {feedback ? <p className="category-feedback">{feedback}</p> : null}
 
                 <Link
-                  to={`/venue/${selectedResource._id}`}
+                  to={getVenuePath(selectedResource)}
                   className="category-back-link"
                   style={{ marginTop: 16, marginBottom: 0 }}
                 >

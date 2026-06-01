@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api, authHeaders } from "../../../lib/api";
+import { normalizeVenueUrlInput, slugifyVenueName } from "../../../lib/venueUrls";
 import { DashboardCard, DashboardPage } from "../shared/PageChrome";
 
 const INITIAL_FORM = {
   name: "",
+  venueUrl: "",
   type: "turf",
   locationName: "",
   latitude: "23.8103",
@@ -40,6 +42,7 @@ export default function AdminAddCompanyPage({ token }) {
         headers: authHeaders(token),
         body: JSON.stringify({
           name: form.name.trim(),
+          slug: form.venueUrl.trim() ? normalizeVenueUrlInput(form.venueUrl) : undefined,
           type: form.type,
           locationName: form.locationName.trim(),
           latitude: Number(form.latitude),
@@ -96,7 +99,26 @@ export default function AdminAddCompanyPage({ token }) {
         <div className="grid gap-3 md:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm text-slate-600">Company Name</label>
-            <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Company name" />
+            <input
+              value={form.name}
+              onChange={(e) => {
+                const name = e.target.value;
+                setForm((p) => ({
+                  ...p,
+                  name,
+                  venueUrl: p.venueUrl || slugifyVenueName(name),
+                }));
+              }}
+              placeholder="Company name"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm text-slate-600">Venue URL</label>
+            <input
+              value={form.venueUrl}
+              onChange={(e) => setForm((p) => ({ ...p, venueUrl: normalizeVenueUrlInput(e.target.value) }))}
+              placeholder="dreamground"
+            />
           </div>
           <div>
             <label className="mb-1 block text-sm text-slate-600">Type</label>

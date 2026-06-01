@@ -4,6 +4,11 @@ import { FiMapPin, FiPlus, FiSave } from "react-icons/fi";
 import { useAuth } from "../../../context/AuthContext";
 import { api, authHeaders } from "../../../lib/api";
 import {
+  getVenuePublicUrl,
+  normalizeVenueUrlInput,
+  slugifyVenueName,
+} from "../../../lib/venueUrls";
+import {
   Alert,
   Badge,
   Button,
@@ -43,9 +48,13 @@ export default function OwnerResourcesPanel() {
   const [settingsForm, setSettingsForm] = useState({
     pricePerHour: "",
     minimumBookingAmount: "",
+    venueUrl: "",
   });
+  const [venueUrlSettingsTouched, setVenueUrlSettingsTouched] = useState(false);
+  const [venueUrlTouched, setVenueUrlTouched] = useState(false);
   const [resourceForm, setResourceForm] = useState({
     name: "",
+    venueUrl: "",
     type: "turf",
     locationName: "",
     latitude: "23.8103",
@@ -88,7 +97,9 @@ export default function OwnerResourcesPanel() {
     setSettingsForm({
       pricePerHour: String(activeResource.pricePerHour ?? ""),
       minimumBookingAmount: String(activeResource.minimumBookingAmount ?? 0),
+      venueUrl: activeResource.slug ?? "",
     });
+    setVenueUrlSettingsTouched(false);
   }, [activeResource]);
 
   const createResourceMutation = useMutation({
@@ -98,6 +109,7 @@ export default function OwnerResourcesPanel() {
         headers: authHeaders(token),
         body: JSON.stringify({
           name: resourceForm.name.trim(),
+          slug: resourceForm.venueUrl.trim() ? normalizeVenueUrlInput(resourceForm.venueUrl) : undefined,
           type: resourceForm.type,
           locationName: resourceForm.locationName.trim(),
           latitude: Number(resourceForm.latitude),
@@ -115,9 +127,11 @@ export default function OwnerResourcesPanel() {
       setResourceForm((current) => ({
         ...current,
         name: "",
+        venueUrl: "",
         locationName: "",
         imageUrl: "",
       }));
+      setVenueUrlTouched(false);
     },
     onError: (error) => setMessage(error.message),
   });
@@ -129,6 +143,9 @@ export default function OwnerResourcesPanel() {
       };
       if (isOwner) {
         payload.pricePerHour = Number(settingsForm.pricePerHour) || 0;
+        if (venueUrlSettingsTouched && settingsForm.venueUrl.trim()) {
+          payload.slug = normalizeVenueUrlInput(settingsForm.venueUrl);
+        }
       }
       return api(`/api/resources/${activeResourceId}/settings`, {
         method: "PATCH",
@@ -191,9 +208,44 @@ export default function OwnerResourcesPanel() {
                 <Input
                   id="res-name"
                   value={resourceForm.name}
-                  onChange={(event) => setResourceForm((current) => ({ ...current, name: event.target.value }))}
+                  onChange={(event) => {
+                    const name = event.target.value;
+                    setResourceForm((current) => ({
+                      ...current,
+                      name,
+                      venueUrl: venueUrlTouched ? current.venueUrl : slugifyVenueName(name),
+                    }));
+                  }}
                   placeholder="Golden Arena Turf"
                 />
+              </Field>
+              <Field
+                label="Venue URL"
+                htmlFor="res-venue-url"
+                hint="Public link for your venue, e.g. dreamground"
+                className="dashboard-field-span-2"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="shrink-0 text-sm text-slate-500">{typeof window !== "undefined" ? window.location.origin : ""}/</span>
+                  <Input
+                    id="res-venue-url"
+                    value={resourceForm.venueUrl}
+                    onChange={(event) => {
+                      setVenueUrlTouched(true);
+                      setResourceForm((current) => ({
+                        ...current,
+                        venueUrl: normalizeVenueUrlInput(event.target.value),
+                      }));
+                    }}
+                    placeholder="dreamground"
+                    className="min-w-[140px] flex-1"
+                  />
+                </div>
+                {resourceForm.venueUrl ? (
+                  <p className="mt-1.5 text-xs text-slate-500">
+                    Preview: {typeof window !== "undefined" ? `${window.location.origin}/${resourceForm.venueUrl}` : `/${resourceForm.venueUrl}`}
+                  </p>
+                ) : null}
               </Field>
               <Field label="Category" htmlFor="res-type" required>
                 <Select
@@ -317,6 +369,9 @@ export default function OwnerResourcesPanel() {
                     <p className="mt-2 text-sm font-semibold text-ds-primary">
                       {resource.pricePerHour} BDT / hr · min {resource.minimumBookingAmount ?? 0} BDT · {resource.type}
                     </p>
+                    {resource.slug ? (
+                      <p className="mt-1 truncate text-xs text-slate-500">{getVenuePublicUrl(resource)}</p>
+                    ) : null}
                   </button>
                 </li>
               ))}
@@ -348,6 +403,36 @@ export default function OwnerResourcesPanel() {
                 onChange={(event) => setSettingsForm((current) => ({ ...current, minimumBookingAmount: event.target.value }))}
               />
             </Field>
+            {isOwner ? (
+              <Field
+                label="Venue URL"
+                htmlFor="settings-venue-url"
+                hint="Share this link on social media or your website"
+                className="dashboard-field-span-2"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="shrink-0 text-sm text-slate-500">{typeof window !== "undefined" ? window.location.origin : ""}/</span>
+                  <Input
+                    id="settings-venue-url"
+                    value={settingsForm.venueUrl}
+                    onChange={(event) => {
+                      setVenueUrlSettingsTouched(true);
+                      setSettingsForm((current) => ({
+                        ...current,
+                        venueUrl: normalizeVenueUrlInput(event.target.value),
+                      }));
+                    }}
+                    placeholder="dreamground"
+                    className="min-w-[140px] flex-1"
+                  />
+                </div>
+                {settingsForm.venueUrl ? (
+                  <p className="mt-1.5 text-xs text-slate-500">
+                    Live link: {typeof window !== "undefined" ? `${window.location.origin}/${settingsForm.venueUrl}` : `/${settingsForm.venueUrl}`}
+                  </p>
+                ) : null}
+              </Field>
+            ) : null}
           </FormGrid>
           <div className="mt-4">
             <Button onClick={() => updateSettingsMutation.mutate()} disabled={updateSettingsMutation.isPending}>

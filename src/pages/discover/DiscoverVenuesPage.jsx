@@ -3,6 +3,7 @@ import { FiArrowLeft, FiArrowRight, FiMapPin } from "react-icons/fi";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
+import { getVenuePath } from "../../lib/venueUrls";
 import { buildCategoriesFromResources, FALLBACK_VENUE_IMAGE, toCategoryLabel } from "./categoryMeta";
 import "./DiscoverVenuesPage.css";
 
@@ -88,7 +89,7 @@ export default function DiscoverVenuesPage() {
           resources.length ? (
             <div className="discover-venues-grid">
               {resources.map((resource) => (
-                <Link key={resource._id} to={`/venue/${resource._id}`} className="discover-venue-card">
+                <Link key={resource._id} to={getVenuePath(resource)} className="discover-venue-card">
                   <div className="discover-venue-image">
                     <img
                       src={resource.images?.[0] || FALLBACK_VENUE_IMAGE}

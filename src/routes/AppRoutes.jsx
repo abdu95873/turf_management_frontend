@@ -12,7 +12,8 @@ import CategoriesPage from "../pages/categories/CategoriesPage";
 import HomePage from "../pages/home/home/HomePage";
 import DiscoverVenuesPage from "../pages/discover/DiscoverVenuesPage";
 import CategoryVenuesPage from "../pages/discover/CategoryVenuesPage";
-import VenueLandingPage from "../pages/venue/VenueLandingPage";
+import LegacyVenueRedirect from "../pages/venue/LegacyVenueRedirect";
+import VenuePublicRoute from "../pages/venue/VenuePublicRoute";
 import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage";
 import LoginPage from "../pages/auth/LoginPage";
 import RegisterPage from "../pages/auth/RegisterPage";
@@ -33,11 +34,6 @@ import RootLayout from "../layouts/RootLayout";
 import AuthLayout from "../layouts/AuthLayout";
 import DashboardLayout from "../layouts/DashboardLayout";
 
-function RedirectCompanyToVenue() {
-  const { resourceId } = useParams();
-  return <Navigate to={`/venue/${resourceId}`} replace />;
-}
-
 function ProtectedRoute({ allowedRoles, children }) {
   const { token, user } = useAuth();
   if (!token) return <Navigate to="/auth/login" replace />;
@@ -45,11 +41,6 @@ function ProtectedRoute({ allowedRoles, children }) {
     return <Navigate to={redirectByRole(user?.role)} replace />;
   }
   return children;
-}
-
-function LegacyCompanyRedirect() {
-  const { resourceId } = useParams();
-  return <Navigate to={`/venue/${resourceId}`} replace />;
 }
 
 function DashboardGate({ children }) {
@@ -78,8 +69,8 @@ export default function AppRoutes() {
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/discover" element={<DiscoverVenuesPage />} />
         <Route path="/discover/:categoryKey" element={<CategoryVenuesPage />} />
-        <Route path="/venue/:resourceId" element={<VenueLandingPage />} />
-        <Route path="/company/:resourceId" element={<RedirectCompanyToVenue />} />
+        <Route path="/venue/:resourceId" element={<LegacyVenueRedirect />} />
+        <Route path="/company/:resourceId" element={<LegacyVenueRedirect />} />
         <Route path="/home" element={<Navigate to="/" replace />} />
 
         <Route element={<AuthLayout />}>
@@ -272,6 +263,8 @@ export default function AppRoutes() {
           <Route path="/admin/commission" element={<Navigate to="/admin/finance" replace />} />
           <Route path="/admin" element={<Navigate to="/admin/overview" replace />} />
         </Route>
+
+        <Route path="/:venueSlug" element={<VenuePublicRoute />} />
 
         <Route
           path="*"

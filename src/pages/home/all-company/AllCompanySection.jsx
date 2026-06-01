@@ -4,6 +4,7 @@ import { FiArrowRight, FiCalendar, FiClock, FiMapPin } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { api, authHeaders } from "../../../lib/api";
+import { getVenuePath } from "../../../lib/venueUrls";
 import { HomeSectionHeading } from "../shared/HomeUi";
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=800&q=80";
@@ -324,7 +325,7 @@ export default function AllVenuesSection({ resources = [] }) {
                 <button
                   type="button"
                   className="w-full text-center text-xs font-semibold uppercase tracking-wide text-[#097E52] hover:underline"
-                  onClick={() => navigate(`/venue/${selectedResource._id}`)}
+                  onClick={() => navigate(getVenuePath(selectedResource))}
                 >
                   View full venue page
                 </button>
